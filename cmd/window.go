@@ -15,22 +15,25 @@
 package cmd
 
 import (
+	"strings"
 	"time"
 
 	"fmt"
 	"os"
+
+	"text/tabwriter"
 
 	pagerduty "github.com/PagerDuty/go-pagerduty"
 	"github.com/spf13/cobra"
 )
 
 var duration string
-var serviceId string
+var serviceID string
 
 // windowCmd represents the window command
 var windowCmd = &cobra.Command{
-	Use:   "window",
-	Short: "",
+	Use:   "mwindow",
+	Short: "Maintenance Windows",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
 		// client := pagerduty.NewClient(apiToken)
@@ -38,10 +41,11 @@ var windowCmd = &cobra.Command{
 }
 
 var listCmd = &cobra.Command{
-	Use:   "list [options]",
-	Short: "",
+	Use:   "list",
+	Short: "List all maintenance windows.",
 	Long:  "",
 	Run: func(cmd *cobra.Command, args []string) {
+
 		client := Client()
 
 		windows, err := client.ListMaintenanceWindows(pagerduty.ListMaintenanceWindowsOptions{})
@@ -51,16 +55,36 @@ var listCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		for _, window := range windows.MaintenanceWindows {
-			fmt.Println(window.Description)
+		w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+
+		columns := []string{
+			"ID", "Service", "Start", "End",
 		}
+
+		fmt.Fprintln(w, strings.Join(columns, "\t"))
+
+		for _, window := range windows.MaintenanceWindows {
+
+			svc := window.Services[0]
+			columns := []string{
+				window.ID,
+				fmt.Sprintf("%s - %s", svc.ID, svc.Summary),
+				window.StartTime,
+				window.EndTime,
+			}
+
+			fmt.Fprintln(w, strings.Join(columns, "\t"))
+		}
+
+		w.Flush()
 	},
 }
 
 var createCmd = &cobra.Command{
 	Use:   "create [options]",
-	Short: "",
-	Long:  "",
+	Short: "Create a maintenance window for a given service.",
+	Long: `Create a new maintenance window for a given service. Duration can be in the form of 3h30m30s.
+	Windows will be created from the current time and end at current time + duration.`,
 	Run: func(cmd *cobra.Command, args []string) {
 
 		client := Client()
@@ -75,9 +99,9 @@ var createCmd = &cobra.Command{
 		start := time.Now()
 		end := start.Add(lengthOfWindow)
 
-		serviceReference := pagerduty.APIObject{ID: serviceId, Type: "service_reference"}
+		serviceReference := pagerduty.APIObject{ID: serviceID, Type: "service_reference"}
 
-		services := make([]pagerduty.APIObject, 1)
+		services := make([]pagerduty.APIObject, 0)
 
 		services = append(services, serviceReference)
 
@@ -96,9 +120,7 @@ var createCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		fmt.Println("%v", created)
-
-		// fmt.Println("%s put into maintenence mode until %s", created.Services[0].Name, end.String())
+		fmt.Printf("Maintenance window created for %s until %s (%s).", created.Services[0].Summary, end, duration)
 
 	},
 }
@@ -108,17 +130,7 @@ func init() {
 	windowCmd.AddCommand(createCmd)
 	windowCmd.AddCommand(listCmd)
 
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// windowCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// windowCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
-
 	createCmd.Flags().StringVar(&duration, "duration", "01:00:00", "Length of the maintenence window. Ex: 1h30m.")
-	createCmd.Flags().StringVar(&serviceId, "service", "", "ID of the service to create a maintenence window for.")
+	createCmd.Flags().StringVar(&serviceID, "service", "", "ID of the service to create a maintenence window for.")
 
 }

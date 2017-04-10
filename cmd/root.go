@@ -31,7 +31,7 @@ var apiToken string
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
 	Use:   "pagerduty-cli",
-	Short: "",
+	Short: "A CLI interface for PagerDuty.",
 	Long:  ``,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
@@ -48,7 +48,7 @@ func Execute() {
 }
 
 func init() {
-	RootCmd.PersistentFlags().StringVar(&apiToken, "api-token", "", "PagerDuty API Token")
+	RootCmd.PersistentFlags().StringVar(&apiToken, "api-token", "", "PagerDuty API Token. Also supports environment variable \"PGDUTY_TOKEN\".")
 
 	if apiToken == "" && os.Getenv("PGDUTY_TOKEN") == "" {
 		fmt.Println("Please provide a PagerDuty API Token.")
