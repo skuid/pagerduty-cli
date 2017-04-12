@@ -113,7 +113,7 @@ var createCmd = &cobra.Command{
 			Services:    services,
 		}
 
-		created, err := client.CreateMaintaienanceWindows(mwindow)
+		created, err := client.CreateMaintenanceWindows(mwindow)
 
 		if err != nil {
 			fmt.Printf(err.Error())
